@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <style id="velqoro-luxury-final">
@@ -472,6 +474,8 @@ const catalogGroups=[
 ];
 function buildCatalog(){const out=[];let id=100;catalogGroups.forEach(group=>group.categories.forEach(row=>row[1].forEach((name,i)=>out.push({id:id++,name,department:group.department,cat:row[0],price:row[2][i],discount:i===0?10:0,stock:12,image:"",description:group.department+" "+row[0]+" — comfortable everyday style."}))));return out;}
 const defaults=buildCatalog();
+const VELQORO_FIREBASE_CONFIG={apiKey:"AIzaSyBCUlAviJK3GQOT167JwwWe3j_fkPj0bTE",authDomain:"velqoro-809bf.firebaseapp.com",projectId:"velqoro-809bf",storageBucket:"velqoro-809bf.firebasestorage.app",messagingSenderId:"682070748642",appId:"1:682070748642:web:277716986b7218b5931dbb"};
+let velqoroDb=null;try{if(!firebase.apps.length)firebase.initializeApp(VELQORO_FIREBASE_CONFIG);velqoroDb=firebase.firestore()}catch(e){console.warn("Firestore unavailable",e)}
 let products=JSON.parse(localStorage.getItem("velqoro_products")||"null");if(!products){products=defaults;localStorage.setItem("velqoro_products",JSON.stringify(products));}else if(!localStorage.getItem("velqoro_catalog_v2")){const names=new Set(products.map(p=>p.name));products=products.concat(defaults.filter(p=>!names.has(p.name)));localStorage.setItem("velqoro_products",JSON.stringify(products));localStorage.setItem("velqoro_catalog_v2","1");}
 let cart=JSON.parse(localStorage.getItem("velqoro_cart")||"[]");
 
@@ -490,6 +494,25 @@ document.getElementById("products").innerHTML=products.filter(p=>p.featured!==fa
 const saleItems=products.some(p=>Number(p.discount||0)>0)?products.filter(p=>Number(p.discount||0)>0).slice(0,4):products.slice(0,3).map(p=>({...p,discount:15}));
 document.getElementById("saleProducts").innerHTML=saleItems.length?saleItems.map(p=>{const price=Number(p.price||0),discount=Number(p.discount||0),now=Math.round(price*(1-discount/100));return '<article class="card saleCard"><div class="pic">'+(p.image?'<img src="'+p.image+'" alt="'+p.name+'">':'<div class="mini"></div>')+'<span class="badge">'+discount+'% OFF</span></div><div class="info"><div class="cat">'+(p.cat||"VELQORO")+'</div><h3>'+p.name+'</h3><div class="price">₹'+now+' <span class="old">₹'+price+'</span></div><button class="add" data-id="'+p.id+'" onclick="add('+p.id+')">ADD TO CART</button></div></article>'}).join(""):'<p class="saleEmpty">Sale items are being updated. Check back soon.</p>';
 count();
+
+async function loadPublishedProducts(){
+ if(!velqoroDb)return;
+ try{
+  const snap=await velqoroDb.collection("products").get();
+  if(snap.empty)return;
+  products=snap.docs.map(doc=>({...doc.data(),id:doc.data().id??doc.id}));
+  localStorage.setItem("velqoro_products",JSON.stringify(products));
+  document.getElementById("products").innerHTML=products.filter(p=>p.featured!==false).slice(0,4).map(homeCard).join("");
+  renderHomeCollections();
+  const items=products.filter(p=>Number(p.discount||0)>0).slice(0,4);
+  document.getElementById("saleProducts").innerHTML=items.length?items.map(p=>{
+   const price=Number(p.price||0),discount=Number(p.discount||0),now=Math.round(price*(1-discount/100));
+   return '<article class="card saleCard"><div class="pic">'+(p.image?'<img src="'+p.image+'" alt="'+p.name+'">':'<div class="mini"></div>')+'<span class="badge">'+discount+'% OFF</span></div><div class="info"><div class="cat">'+(p.cat||"VELQORO")+'</div><h3>'+p.name+'</h3><div class="price">₹'+now+' <span class="old">₹'+price+'</span></div><button class="add" data-id="'+p.id+'" onclick="add('+p.id+')">ADD TO CART</button></div></article>'
+  }).join(""):'<p class="saleEmpty">Sale items are being updated. Check back soon.</p>';
+  count();
+ }catch(e){console.warn("Could not load shared products",e)}
+}
+loadPublishedProducts();
 </script>
 
 
