@@ -115,7 +115,7 @@ try{
   console.error(e);
   document.getElementById("loginMsg").textContent="Firebase could not start. Refresh the page and try again.";
 }
-async function loginWithEmail(){
+async async function loginWithEmail(){
   if(!firebaseReady){document.getElementById("loginMsg").textContent="Firebase could not start. Please refresh and try again.";return;}
   const email=document.getElementById("adminEmail").value.trim().toLowerCase();
   const password=document.getElementById("adminPassword").value;
